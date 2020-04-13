@@ -6,11 +6,12 @@ import doobie.util.transactor.Transactor
 import doobie.util.ExecutionContexts
 import doobie.h2._
 import pureconfig._
-import root.errors._
+import root.errors.{CRUDError, _}
 import root.utils.Config
 import root.utils.Utils.EitherErr
 import pureconfig._
 import pureconfig.generic.auto._
+import root.REPL
 
 import scala.util.control.NonFatal
 
@@ -69,6 +70,7 @@ object Main extends IOApp {
       )
       tested ← EitherT(testTransactor(trs))
     } yield tested
+    // btw, how could I take Config out? like yield (tested, cfg). I tried, but there are some typing problems
 
     val xa = xa_either.value // Don't you ask a single question >_>
 
@@ -76,16 +78,17 @@ object Main extends IOApp {
       case Left(err) =>
         IO(println(s"Error during initialization: $err")).as(ExitCode.Error)
       case Right(trs) =>
-        val program1 =
-          sql"SELECT * FROM INFORMATION_SCHEMA.USERS "
-            .query[(String, Boolean, String, Int)]
-            .stream
-            .compile
-            .toList
-        for {
-          i ← program1.transact(trs)
-          _ ← IO(println(i))
-        } yield (ExitCode.Success)
+        REPL.runREPL(trs)
+//        val program1 =
+//          sql"SELECT * FROM INFORMATION_SCHEMA.USERS "
+//            .query[(String, Boolean, String, Int)]
+//            .stream
+//            .compile
+//            .toList
+//        for {
+//          i ← program1.transact(trs)
+//          _ ← IO(println(i))
+//        } yield (ExitCode.Success)
     }
   }
 }

@@ -8,15 +8,12 @@ import cats._
 import cats.effect._
 import cats.implicits._
 
-trait State
+object REPL {
+  sealed trait Command
 
-object MainLoop {
-  def apply(config: Config): State = {
-    val state = new State {}
-    loopBody(state)
-  }
   @tailrec
-  def loopBody(state: State): State = {
-    loopBody((state))
+  def runREPL(trs: Transactor[IO]): IO[ExitCode] = {
+
+    runREPL(trs)
   }
 }
