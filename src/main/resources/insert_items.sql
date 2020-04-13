@@ -1,0 +1,5 @@
+INSERT INTO KHINKA."Items" (ID, NAME, DESCRIPTION, PRICE, AMOUNT) VALUES (1, 'Mutton Khinka', 'Our new Khinka with delicious Mutton stuffing. Best served with Shreck, Kek and Kok', 120, 90);
+INSERT INTO KHINKA."Items" (ID, NAME, DESCRIPTION, PRICE, AMOUNT) VALUES (2, 'Beef Khinka', 'Legendary Beef Khinka made of best Tatar cows by other Tatar cows. Delicious with cream', 99, 500);
+INSERT INTO KHINKA."Items" (ID, NAME, DESCRIPTION, PRICE, AMOUNT) VALUES (3, 'Chicken Khinka', 'A version of our finest Khinkas for poultry lovers. Best with Shreck', 110.5, 140);
+INSERT INTO KHINKA."Items" (ID, NAME, DESCRIPTION, PRICE, AMOUNT) VALUES (4, 'Bukhlo #2 Dark', 'Rich flavour of our Bukhlo #2 Dark spreads pleasure and aromas of Metal Works factory around  ', 150, 670);
+INSERT INTO KHINKA."Items" (ID, NAME, DESCRIPTION, PRICE, AMOUNT) VALUES (5, 'Bukhlo #3 DoodkaWasser', 'Finest German beverage for all you tired workers. Best with Enterosgel', 89.95, 800);
