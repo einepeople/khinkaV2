@@ -1,4 +1,4 @@
-package root.model
+package crudkhalnaya.model
 
 import java.time.LocalDateTime
 

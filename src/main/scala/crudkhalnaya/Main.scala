@@ -1,17 +1,16 @@
+package crudkhalnaya
+
 import cats.data.EitherT
 import cats.effect._
 import cats.implicits._
+import crudkhalnaya.errors.{CRUDError, _}
+import crudkhalnaya.utils.Config
+import crudkhalnaya.utils.Utils.EitherErr
 import doobie.implicits._
 import doobie.util.transactor.Transactor
 import doobie.util.ExecutionContexts
-import doobie.h2._
-import pureconfig._
-import root.errors.{CRUDError, _}
-import root.utils.Config
-import root.utils.Utils.EitherErr
 import pureconfig._
 import pureconfig.generic.auto._
-import root.REPL
 
 import scala.util.control.NonFatal
 
@@ -54,7 +53,7 @@ object Main extends IOApp {
 
   def run(args: List[String]): IO[ExitCode] = {
 
-    val xa_either: EitherT[IO, CRUDError, Transactor[IO]] = for {
+    val xaEither: EitherT[IO, CRUDError, Transactor[IO]] = for {
       cfg ← EitherT(loadConfig)
       trs ← EitherT(
         IO(
@@ -72,7 +71,7 @@ object Main extends IOApp {
     } yield tested
     // btw, how could I take Config out? like yield (tested, cfg). I tried, but there are some typing problems
 
-    val xa = xa_either.value // Don't you ask a single question >_>
+    val xa = xaEither.value // Don't you ask a single question >_>
 
     xa.flatMap {
       case Left(err) =>

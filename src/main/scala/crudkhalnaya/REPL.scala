@@ -1,11 +1,11 @@
-package root
+package crudkhalnaya
 
 import java.time.LocalDate
 
 import cats.effect._
+import crudkhalnaya.errors.{CRUDError, MalformedCommandError}
+import crudkhalnaya.model.Client
 import doobie._
-import root.errors.{CRUDError, MalformedCommandError}
-import root.model.Client
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}

@@ -1,6 +1,6 @@
-package root.errors
+package crudkhalnaya.errors
 
-trait CRUDError
+sealed trait CRUDError
 
 case object ConfigError extends CRUDError
 case object DBConnectionError extends CRUDError

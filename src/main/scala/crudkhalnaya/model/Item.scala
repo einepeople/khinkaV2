@@ -1,4 +1,4 @@
-package root.model
+package crudkhalnaya.model
 
 case class Item(id: Int,
                 name: String,

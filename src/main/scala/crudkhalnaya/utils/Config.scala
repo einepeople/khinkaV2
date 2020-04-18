@@ -1,7 +1,4 @@
-package root.utils
-
-import pureconfig._
-import pureconfig.generic.auto._
+package crudkhalnaya.utils
 
 case class dbConfig(driver: String,
                     hostname: String,
