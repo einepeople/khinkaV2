@@ -10,7 +10,7 @@ import cats._, cats.data._, cats.implicits._
 import doobie.util.query.Query0
 import doobie.util.update.Update0
 
-sealed trait CRUD[T, ID] {
+trait CRUD[T, ID] {
   def create(obj: T): Update0
   def read(id: ID): Query0[T]
   def update(id: ID, newVals: T): Update0

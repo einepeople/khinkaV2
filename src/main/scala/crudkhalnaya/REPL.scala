@@ -36,7 +36,8 @@ object REPL {
     }
   }
 
-  //private def parseInt(input: String):
+  private def parseInt(input: String): Option[Int] =
+    Try[Int](input.toInt).toOption
 
   private def parseCommand(input: String): Either[CRUDError, Command] = {
     input match {
@@ -49,12 +50,15 @@ object REPL {
         } yield
           AddClient(Client(-1, checkName, checkAddr, checkBirth, checkSex))
       case s"get client with id $maybeId" ⇒
-        Try[Int](maybeId.toInt) match {
-          case Failure(exception) ⇒ Left(MalformedCommandError)
-          case Success(id) ⇒ Right(FetchClient(id))
+        parseInt(maybeId) match {
+          case None ⇒ Left(MalformedCommandError)
+          case Some(id) ⇒ Right(FetchClient(id))
         }
 //      case s"for user $id set $col to $val" ⇒
-//        for
+//        for {
+//          checkId ← parseInt(id)
+//          checkCol ← checkCol
+//        }
 
     }
   }

@@ -1,5 +1,7 @@
 package crudkhalnaya
 
+import java.util.concurrent.Executors.newFixedThreadPool
+
 import cats.data.EitherT
 import cats.effect._
 import cats.implicits._
@@ -12,12 +14,16 @@ import doobie.util.ExecutionContexts
 import pureconfig._
 import pureconfig.generic.auto._
 
+import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 object Main extends IOApp {
 
+  implicit val ec: ExecutionContext =
+    ExecutionContext.fromExecutor(newFixedThreadPool(16))
+
   implicit val syncCtx: ContextShift[IO] =
-    IO.contextShift(ExecutionContexts.synchronous)
+    IO.contextShift(ec)
 
   def loadConfig: IO[EitherErr[Config]] = {
     ConfigSource.default.load[Config] match {
@@ -36,7 +42,7 @@ object Main extends IOApp {
       user,
       pass,
       Blocker
-        .liftExecutionContext(ExecutionContexts.synchronous)
+        .liftExecutionContext(ec)
     )
   }
 
@@ -51,9 +57,8 @@ object Main extends IOApp {
       }
   }
 
-  def run(args: List[String]): IO[ExitCode] = {
-
-    val xaEither: EitherT[IO, CRUDError, Transactor[IO]] = for {
+  def runFallible(args: List[String]): EitherT[IO, CRUDError, ExitCode] =
+    for {
       cfg ← EitherT(loadConfig)
       trs ← EitherT(
         IO(
@@ -68,26 +73,15 @@ object Main extends IOApp {
         )
       )
       tested ← EitherT(testTransactor(trs))
-    } yield tested
-    // btw, how could I take Config out? like yield (tested, cfg). I tried, but there are some typing problems
+      exitCode ← EitherT.liftF(REPL.runREPL(tested))
+    } yield exitCode
 
-    val xa = xaEither.value // Don't you ask a single question >_>
-
-    xa.flatMap {
+  def run(args: List[String]): IO[ExitCode] = {
+    runFallible(args).value.flatMap {
       case Left(err) =>
         IO(println(s"Error during initialization: $err")).as(ExitCode.Error)
-      case Right(trs) =>
-        REPL.runREPL(trs)
-//        val program1 =
-//          sql"SELECT * FROM INFORMATION_SCHEMA.USERS "
-//            .query[(String, Boolean, String, Int)]
-//            .stream
-//            .compile
-//            .toList
-//        for {
-//          i ← program1.transact(trs)
-//          _ ← IO(println(i))
-//        } yield (ExitCode.Success)
+      case Right(value) =>
+        IO.pure(value)
     }
   }
 }
