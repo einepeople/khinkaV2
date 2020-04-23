@@ -7,3 +7,5 @@ case class Order(id: Int,
                  cid: Int,
                  deliveryAddress: String,
                  content: List[(Int, Int)])
+
+object Order {}

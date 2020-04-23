@@ -5,3 +5,5 @@ case class Item(id: Int,
                 description: String,
                 price: Double,
                 amount: Int)
+
+object Item {}

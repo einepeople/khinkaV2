@@ -3,8 +3,9 @@ package crudkhalnaya
 import java.time.LocalDate
 
 import cats.effect._
-import crudkhalnaya.errors.{CRUDError, MalformedCommandError}
+import crudkhalnaya.errors.{CRUDError, MalformedCommandError, ParseError}
 import crudkhalnaya.model.Client
+import crudkhalnaya.utils.Utils.EitherErr
 import doobie._
 
 import scala.annotation.tailrec
@@ -17,10 +18,13 @@ object REPL {
 
   case class AddClient(client: Client) extends ClientCommand
   case class FetchClient(id: Int) extends ClientCommand
-  case class UpdateClient(id: Int, new_data: Client) extends ClientCommand
+  case class UpdateName(id: Int, newName: String) extends ClientCommand
+  case class UpdateAddress(id: Int, newAddress: String) extends ClientCommand
+  case class UpdateBirthdate(id: Int, newBD: LocalDate) extends ClientCommand
+  case class UpdateSex(id: Int, newSex: Boolean) extends ClientCommand
   case class DeleteClient(id: Int) extends ClientCommand
 
-  private def parseGender(input: String): Either[CRUDError, Boolean] = {
+  private def parseGender(input: String): EitherErr[Boolean] = {
     input.toLowerCase match {
       case "male" ⇒ Right(true)
       case "female" ⇒ Right(false)
@@ -28,7 +32,7 @@ object REPL {
     }
   }
 
-  private def parseBirthdate(input: String): Either[CRUDError, LocalDate] = {
+  private def parseBirthdate(input: String): EitherErr[LocalDate] = {
     val t = Try[LocalDate](LocalDate.parse(input))
     t match {
       case Success(value) ⇒ Right(value)
@@ -36,8 +40,11 @@ object REPL {
     }
   }
 
-  private def parseInt(input: String): Option[Int] =
-    Try[Int](input.toInt).toOption
+  private def parseInt(input: String): EitherErr[Int] =
+    Try[Int](input.toInt) match {
+      case Failure(exception) ⇒ Left(ParseError)
+      case Success(value) ⇒ Right(value)
+    }
 
   private def parseCommand(input: String): Either[CRUDError, Command] = {
     input match {
@@ -50,15 +57,18 @@ object REPL {
         } yield
           AddClient(Client(-1, checkName, checkAddr, checkBirth, checkSex))
       case s"get client with id $maybeId" ⇒
-        parseInt(maybeId) match {
-          case None ⇒ Left(MalformedCommandError)
-          case Some(id) ⇒ Right(FetchClient(id))
-        }
-//      case s"for user $id set $col to $val" ⇒
-//        for {
-//          checkId ← parseInt(id)
-//          checkCol ← checkCol
-//        }
+        for {
+          checkedInt ← parseInt(maybeId)
+        } yield FetchClient(checkedInt)
+      case s"for client $maybeId set name to $newName" ⇒
+        for {
+          checkId ← parseInt(maybeId)
+          checkName ← Either.cond(
+            newName.isBlank,
+            newName,
+            MalformedCommandError
+          )
+        } yield UpdateName(checkId, checkName)
 
     }
   }

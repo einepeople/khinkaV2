@@ -7,3 +7,4 @@ case object DBConnectionError extends CRUDError
 
 case object MalformedCommandError extends CRUDError
 case object CommandNotFoundError extends CRUDError
+case object ParseError extends CRUDError
