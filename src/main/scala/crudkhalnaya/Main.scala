@@ -6,6 +6,7 @@ import cats.data.EitherT
 import cats.effect._
 import cats.implicits._
 import crudkhalnaya.errors.{CRUDError, _}
+import crudkhalnaya.repl.REPL
 import crudkhalnaya.utils.Config
 import crudkhalnaya.utils.Utils.EitherErr
 import doobie.implicits._
