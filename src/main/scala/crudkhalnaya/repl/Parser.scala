@@ -4,18 +4,7 @@ import java.time.LocalDate
 
 import crudkhalnaya.errors.{CommandNotFoundError, ParseError}
 import crudkhalnaya.model.Client
-import crudkhalnaya.repl.Commands.{
-  AddClient,
-  Command,
-  DeleteClient,
-  Exit,
-  FetchAllClients,
-  FetchClient,
-  UpdateAddress,
-  UpdateBirthdate,
-  UpdateName,
-  UpdateSex
-}
+import crudkhalnaya.repl.Commands._
 import crudkhalnaya.utils.Utils.EitherErr
 
 import scala.util.{Failure, Success, Try}
@@ -25,7 +14,7 @@ object Parser {
     input.toLowerCase match {
       case "male" ⇒ Right(true)
       case "female" ⇒ Right(false)
-      case _ ⇒ Left(ParseError)
+      case _ ⇒ Left(ParseError(s"Cannot parse sex from $input"))
     }
   }
 
@@ -33,13 +22,13 @@ object Parser {
     val t = Try[LocalDate](LocalDate.parse(input))
     t match {
       case Success(value) ⇒ Right(value)
-      case Failure(_) ⇒ Left(ParseError)
+      case Failure(_) ⇒ Left(ParseError(s"Cannot parse date from $input"))
     }
   }
 
   private def parseInt(input: String): EitherErr[Int] =
     Try[Int](input.toInt) match {
-      case Failure(_) ⇒ Left(ParseError)
+      case Failure(_) ⇒ Left(ParseError(s"Cannot parse int from $input"))
       case Success(value) ⇒ Right(value)
     }
 
@@ -47,10 +36,20 @@ object Parser {
     input match {
       case "exit" ⇒
         Right(Exit)
+      case "help" ⇒
+        Right(Help)
       case s"add new client $name, $sox, born $date, address $addr" ⇒
         for {
-          checkName ← Either.cond(name.isBlank, name, ParseError)
-          checkAddr ← Either.cond(addr.isBlank, addr, ParseError)
+          checkName ← Either.cond(
+            !name.isBlank,
+            name,
+            ParseError("Name cannot be blank: $name")
+          )
+          checkAddr ← Either.cond(
+            !addr.isBlank,
+            addr,
+            ParseError("Address cannot be blank")
+          )
           checkSex ← parseSex(sox)
           checkBirth ← parseBirthdate(date)
         } yield
@@ -62,12 +61,20 @@ object Parser {
       case s"for client $maybeId set name to $newName" ⇒
         for {
           checkId ← parseInt(maybeId)
-          checkName ← Either.cond(newName.isBlank, newName, ParseError)
+          checkName ← Either.cond(
+            !newName.isBlank,
+            newName,
+            ParseError("Name cannot be blank")
+          )
         } yield UpdateName(checkId, checkName)
       case s"for client $maybeId set address to $newAddress" ⇒
         for {
           checkId ← parseInt(maybeId)
-          checkName ← Either.cond(newAddress.isBlank, newAddress, ParseError)
+          checkName ← Either.cond(
+            !newAddress.isBlank,
+            newAddress,
+            ParseError("Name cannot be blank")
+          )
         } yield UpdateAddress(checkId, checkName)
       case s"for client $maybeId set birthdate to $newBD" ⇒
         for {
@@ -85,7 +92,7 @@ object Parser {
         } yield DeleteClient(checkId)
       case "show all clients" ⇒
         Right(FetchAllClients)
-      case _ ⇒ Left(CommandNotFoundError)
+      case x ⇒ Left(CommandNotFoundError(s"Unknown command $x"))
     }
   }
 }

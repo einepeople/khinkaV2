@@ -13,22 +13,22 @@ object REPL {
   def execute(value: EitherErr[Command], xa: Transactor[IO]): IO[Unit] = {
     value match {
       case Left(err) ⇒
-        IO(println(s"Error occured during command parsing: $err"))
+        IO(println(s"Error occurred during command parsing: $err"))
       case Right(cmd) ⇒
         executeCommand(cmd, xa)
     }
   }
   def checkForExit(value: EitherErr[Command]): Boolean = {
     value match {
-      case Right(validCmd) if validCmd == Exit ⇒ true
+      case Right(validCmd) if validCmd.equals(Exit) ⇒ true
       case _ ⇒ false
     }
   }
 
   def runREPL(trs: Transactor[IO]): IO[ExitCode] = {
     for {
-      input ← IO(StdIn.readLine("Enter a command\n> "))
-      cmd ← IO(parseCommand(input))
+      input ← IO(StdIn.readLine("\n> "))
+      cmd ← IO(parseCommand(input.strip()))
       _ ← execute(cmd, trs)
       res ← if (checkForExit(cmd)) IO.pure(ExitCode.Success) else runREPL(trs)
     } yield res

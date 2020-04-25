@@ -1,6 +1,7 @@
 package crudkhalnaya
 
 import java.util.concurrent.Executors.newFixedThreadPool
+import java.util.concurrent.ExecutorService
 
 import cats.data.EitherT
 import cats.effect._
@@ -20,15 +21,16 @@ import scala.util.control.NonFatal
 
 object Main extends IOApp {
 
+  val ftpool: ExecutorService = newFixedThreadPool(16)
   implicit val ec: ExecutionContext =
-    ExecutionContext.fromExecutor(newFixedThreadPool(16))
+    ExecutionContext.fromExecutor(ftpool)
 
   implicit val syncCtx: ContextShift[IO] =
     IO.contextShift(ec)
 
   def loadConfig: IO[EitherErr[Config]] = {
     ConfigSource.default.load[Config] match {
-      case Left(_)       => IO(Left(ConfigError))
+      case Left(_)       => IO(Left(ConfigError("Failed to load config")))
       case Right(config) => IO(Right(config))
     }
   }
@@ -54,7 +56,7 @@ object Main extends IOApp {
       .transact(trs)
       .map[EitherErr[Transactor[IO]]](_ ⇒ Right(trs))
       .recover {
-        case NonFatal(_) ⇒ Left(DBConnectionError)
+        case NonFatal(_) ⇒ Left(DBConnectionError("DB test query failed"))
       }
   }
 
@@ -82,7 +84,7 @@ object Main extends IOApp {
       case Left(err) =>
         IO(println(s"Error during initialization: $err")).as(ExitCode.Error)
       case Right(value) =>
-        IO.pure(value)
+        IO(ftpool.shutdown()).as(ExitCode.Success)
     }
   }
 }

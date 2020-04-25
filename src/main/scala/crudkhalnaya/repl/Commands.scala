@@ -10,6 +10,8 @@ object Commands {
 
   case object Exit extends Command
 
+  case object Help extends Command
+
   case class AddClient(client: Client) extends Command
 
   case class FetchClient(id: Int) extends Command

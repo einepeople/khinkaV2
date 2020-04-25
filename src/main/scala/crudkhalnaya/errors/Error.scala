@@ -1,9 +1,19 @@
 package crudkhalnaya.errors
 
-sealed trait CRUDError
+sealed trait CRUDError {
+  def toString: String
+}
 
-case object ConfigError extends CRUDError
-case object DBConnectionError extends CRUDError
+case class ConfigError(msg: String) extends CRUDError {
+  override def toString: String = msg
+}
+case class DBConnectionError(msg: String) extends CRUDError {
+  override def toString: String = msg
+}
 
-case object CommandNotFoundError extends CRUDError
-case object ParseError extends CRUDError
+case class CommandNotFoundError(msg: String) extends CRUDError {
+  override def toString: String = msg
+}
+case class ParseError(msg: String) extends CRUDError {
+  override def toString: String = msg
+}
