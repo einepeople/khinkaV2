@@ -19,11 +19,11 @@ object Executor {
     "exit",
     "help",
     "show all clients",
-    "add new client $name, $sox, born $date, address $addr",
+    "add new client $name, $sex, born YYYY-MM-DD, address $addr",
     "get client with id $Id",
     "for client $Id set name to $newName",
     "for client $Id set address to $newAddress",
-    "for client $Id set birthdate to $newBD",
+    "for client $Id set birthdate to YYYY-MM-DD",
     "for client $Id set sex to $newsex",
     "delete client $Id"
   )
@@ -52,40 +52,67 @@ object Executor {
         Client
           .fetch(id)
           .unique
+          .attempt
           .transact(xa)
-          .flatMap(cl ⇒ {
-            IO(println(cl.toString))
-          })
+          .flatMap {
+            case Left(_) ⇒ IO(println(s"Client $id not found"))
+            case Right(x) ⇒ IO(println(x.toString))
+          }
       case UpdateName(id, newName) ⇒
         Client
           .updateName(id, newName)
           .withUniqueGeneratedKeys[Int]("id")
+          .attempt
           .transact(xa)
-          .flatMap(id ⇒ IO(println(s"User $id now has name $newName")))
+          .flatMap {
+            case Left(_) ⇒ IO(println(s"Client $id not found"))
+            case Right(x) ⇒ IO(println(s"Client $x now has name $newName"))
+          }
       case UpdateAddress(id, newAddress) ⇒
         Client
           .updateAddress(id, newAddress)
           .withUniqueGeneratedKeys[Int]("id")
+          .attempt
           .transact(xa)
-          .flatMap(id ⇒ IO(println(s"User $id now has address $newAddress")))
+          .flatMap {
+            case Left(_) ⇒ IO(println(s"Client $id not found"))
+            case Right(x) ⇒
+              IO(println(s"Client $x now has address $newAddress"))
+          }
       case UpdateBirthdate(id, newBD) ⇒
         Client
           .updateAddress(id, newBD)
           .withUniqueGeneratedKeys[Int]("id")
+          .attempt
           .transact(xa)
-          .flatMap(id ⇒ IO(println(s"User $id now has birthdate $newBD")))
+          .flatMap {
+            case Left(_) ⇒ IO(println(s"Client $id not found"))
+            case Right(x) ⇒
+              IO(println(s"Client $x now has birthdate $newBD"))
+          }
       case UpdateSex(id, newSex) ⇒
         Client
           .updateSex(id, newSex)
           .withUniqueGeneratedKeys[Int]("id")
+          .attempt
           .transact(xa)
-          .flatMap(id ⇒ IO(println(s"User $id now has sex $newSex")))
+          .flatMap {
+            case Left(_) ⇒ IO(println(s"Client $id not found"))
+            case Right(x) ⇒
+              val sex = if (newSex) "male" else "female"
+              IO(println(s"Client $x is now $sex"))
+          }
       case DeleteClient(id) ⇒
         Client
           .delete(id)
           .withUniqueGeneratedKeys[Int]("id")
+          .attempt
           .transact(xa)
-          .flatMap(id ⇒ IO(println(s"User $id has been deleted")))
+          .flatMap {
+            case Left(_) ⇒ IO(println(s"No such client"))
+            case Right(x) ⇒
+              IO(println(s"Client $x deleted"))
+          }
       case FetchAllClients ⇒
         Client.fetchAll
           .to[List]

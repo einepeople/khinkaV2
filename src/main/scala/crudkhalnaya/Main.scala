@@ -20,7 +20,6 @@ import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 object Main extends IOApp {
-
   val ftpool: ExecutorService = newFixedThreadPool(16)
   implicit val ec: ExecutionContext =
     ExecutionContext.fromExecutor(ftpool)
