@@ -14,8 +14,8 @@ case class Item(id: Int,
                 amount: Int) {
   override def toString: String =
     s"Item $id: $name\n" +
-      s"Description: $description" +
-      s"Price: $price; $amount at stock"
+      s"Description: $description\n" +
+      s"Price: $price; $amount at stockhelp"
 }
 
 object Item {

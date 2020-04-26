@@ -9,7 +9,7 @@ import cats.data._
 import cats.effect._
 import cats.implicits._
 import fs2.Stream
-import crudkhalnaya.model.Client
+import crudkhalnaya.model.{Client, Item}
 import doobie.Transactor
 import doobie.util.compat.FactoryCompat
 
@@ -18,14 +18,22 @@ object Executor {
   val availableCommands = List(
     "exit",
     "help",
-    "show all clients",
     "add new client $name, $sex, born YYYY-MM-DD, address $addr",
-    "get client with id $Id",
+    "show client $Id",
+    "show all clients",
+    "delete client $Id",
     "for client $Id set name to $newName",
     "for client $Id set address to $newAddress",
     "for client $Id set birthdate to YYYY-MM-DD",
     "for client $Id set sex to $newsex",
-    "delete client $Id"
+    "add new item $name, price $price, initial amount $iam, description $descr",
+    "show item $id",
+    "show all items",
+    "delete item $id",
+    "for item $maybeId set name to $newName",
+    "for item $maybeId set description to $descr",
+    "for item $maybeId set price to $maybePrice",
+    "for item $maybeId set amount to $maybeAmt"
   )
 
   def executeCommand(value: Command, xa: Transactor[IO]): IO[Unit] = {
@@ -58,7 +66,7 @@ object Executor {
             case Left(_) ⇒ IO(println(s"Client $id not found"))
             case Right(x) ⇒ IO(println(x.toString))
           }
-      case UpdateName(id, newName) ⇒
+      case UpdateClientName(id, newName) ⇒
         Client
           .updateName(id, newName)
           .withUniqueGeneratedKeys[Int]("id")
@@ -126,6 +134,90 @@ object Executor {
                 )
             )
           )
+      case AddItem(i) ⇒
+        Item
+          .create(i)
+          .withUniqueGeneratedKeys[Int]("id")
+          .transact(xa)
+          .flatMap(id ⇒ IO(println(s"Created new Item with id $id")))
+      case DeleteItem(id) ⇒
+        Item
+          .delete(id)
+          .withUniqueGeneratedKeys[Int]("id")
+          .attempt
+          .transact(xa)
+          .flatMap {
+            case Left(_) ⇒ IO(println(s"No such item"))
+            case Right(x) ⇒
+              IO(println(s"Item $x deleted"))
+          }
+      case FetchItem(id) ⇒
+        Item
+          .fetch(id)
+          .unique
+          .attempt
+          .transact(xa)
+          .flatMap {
+            case Left(_) ⇒ IO(println(s"Item $id not found"))
+            case Right(x) ⇒ IO(println(x.toString))
+          }
+      case FetchAllItems ⇒
+        Item.fetchAll
+          .to[List]
+          .transact(xa)
+          .flatMap(
+            list ⇒
+              IO(
+                println(
+                  ("List of current Items:" ::
+                    list.map(_.toString)).mkString("\n\n")
+                )
+            )
+          )
+      case UpdateItemName(id, newName) ⇒
+        Item
+          .updateName(id, newName)
+          .withUniqueGeneratedKeys[Int]("id")
+          .attempt
+          .transact(xa)
+          .flatMap {
+            case Left(_) ⇒ IO(println(s"Item $id not found"))
+            case Right(x) ⇒
+              IO(println(s"Item $x now has name $newName"))
+          }
+      case UpdateDescription(id, newDescr) ⇒
+        Item
+          .updateDescription(id, newDescr)
+          .withUniqueGeneratedKeys[Int]("id")
+          .attempt
+          .transact(xa)
+          .flatMap {
+            case Left(_) ⇒ IO(println(s"Item $id not found"))
+            case Right(x) ⇒
+              IO(println(s"Item $x now has description $newDescr"))
+          }
+      case UpdatePrice(id, newPrice) ⇒
+        Item
+          .updatePrice(id, newPrice)
+          .withUniqueGeneratedKeys[Int]("id")
+          .attempt
+          .transact(xa)
+          .flatMap {
+            case Left(_) ⇒ IO(println(s"Item $id not found"))
+            case Right(x) ⇒
+              IO(println(s"Item $x now costs $newPrice"))
+          }
+      case UpdateAmount(id, newAmt) ⇒
+        Item
+          .updateAmount(id, newAmt)
+          .withUniqueGeneratedKeys[Int]("id")
+          .attempt
+          .transact(xa)
+          .flatMap {
+            case Left(_) ⇒ IO(println(s"Item $id not found"))
+            case Right(x) ⇒
+              IO(println(s"We now have $newAmt of item $x"))
+          }
       case _ ⇒ IO(println("Command unknown or not implemented yet"))
     }
   }
