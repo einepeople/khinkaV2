@@ -5,9 +5,15 @@ import crudkhalnaya.repl.Commands._
 import doobie._
 import doobie.implicits._
 import cats.data._
+import cats._
 import cats.effect._
 import cats.implicits._
-import crudkhalnaya.errors.{CRUDError, OrderNotFound, UserNotFound}
+import crudkhalnaya.errors.{
+  CRUDError,
+  ItemInBucketNotFound,
+  OrderNotFound,
+  UserNotFound
+}
 import fs2.Stream
 import crudkhalnaya.model.{Client, Item, Order}
 import crudkhalnaya.utils.Utils.EitherErr
@@ -53,11 +59,21 @@ object Executor {
       .attempt
       .transact(xa)
       .flatMap {
-        case Left(_) ⇒ IO(Left(UserNotFound))
+        case Left(_) ⇒ IO(Left(UserNotFound(s"User $id not found")))
         case Right(value) ⇒ IO(Right(value.id))
       }
   }
-
+  def checkForItem(id: Int, xa: Transactor[IO]): IO[EitherErr[Int]] = {
+    Item
+      .fetch(id)
+      .unique
+      .attempt
+      .transact(xa)
+      .flatMap {
+        case Left(_) ⇒ IO(Left(UserNotFound(s"Item $id not found")))
+        case Right(value) ⇒ IO(Right(value.id))
+      }
+  }
   def checkForOrder(id: Int, xa: Transactor[IO]): IO[EitherErr[Int]] = {
     Order
       .fetch(id)
@@ -65,8 +81,22 @@ object Executor {
       .attempt
       .transact(xa)
       .flatMap {
-        case Left(_) ⇒ IO(Left(OrderNotFound))
+        case Left(_) ⇒ IO(Left(OrderNotFound(s"Order $id not found")))
         case Right(value) ⇒ IO(Right(value.id))
+      }
+  }
+  def checkItemInOrder(ordId: Int,
+                       itemId: Int,
+                       xa: Transactor[IO]): IO[EitherErr[(Int, Int, Int)]] = {
+    Order
+      .fetchBucketEntry(ordId, itemId)
+      .unique
+      .attempt
+      .transact(xa)
+      .flatMap {
+        case Left(_) ⇒
+          IO(Left(ItemInBucketNotFound(s"No item $itemId in $ordId")))
+        case Right(value) ⇒ IO(Right(value))
       }
   }
 
@@ -254,19 +284,144 @@ object Executor {
           }
       case AddOrder(order) ⇒
         val res = for {
-          _ ← EitherT(checkForUser(order.clientId, xa))
-          resId ← EitherT.right(
+          uid ← EitherT(checkForUser(order.clientId, xa))
+        } yield uid
+        res.value.flatMap {
+          case Left(err) ⇒ IO(println(err.toString))
+          case Right(_) ⇒
             Order
               .create(order)
               .withUniqueGeneratedKeys[Int]("id")
               .transact(xa)
-          )
-        } yield resId
-        res.value.flatMap {
-          case Left(err) ⇒ IO(println(err.toString))
-          case Right(value) ⇒ IO(println(s"Order $value has been created"))
+              .flatMap { id ⇒
+                IO(println(s"Order $id has been created"))
+              }
         }
-      //case FetchOrder
+      case FetchOrder(id) ⇒
+        Order
+          .fetch(id)
+          .unique
+          .attempt
+          .transact(xa)
+          .flatMap {
+            case Left(_) ⇒ IO(println(OrderNotFound(s"Order $id not found")))
+            case Right(value) ⇒ IO(println(value.toString))
+          }
+      case DeleteOrder(id) ⇒
+        Order
+          .delete(id)
+          .withUniqueGeneratedKeys[Int]("id")
+          .attempt
+          .transact(xa)
+          .flatMap {
+            case Left(_) ⇒ IO(println(OrderNotFound(s"Order $id not found")))
+            case Right(deletedId) ⇒
+              IO(println(s"Order $deletedId has been deleted"))
+          }
+      case FetchAllOrders ⇒
+        Order.fetchAll
+          .to[List]
+          .transact(xa)
+          .flatMap(
+            list ⇒
+              IO(
+                println(
+                  ("List of all orders:" ::
+                    list.map(_.toString)).mkString("\n\n")
+                )
+            )
+          )
+      case FetchOrdersForClient(id: Int) ⇒
+        checkForUser(id, xa).flatMap {
+          case Left(_) ⇒ IO(println(s"User $id not found"))
+          case Right(_) ⇒
+            Order
+              .fetchForUser(id)
+              .to[List]
+              .map(_.toString)
+              .attempt
+              .transact(xa)
+              .flatMap {
+                case Left(_) ⇒
+                  IO(
+                    println(
+                      s"Error during fetching. Probably no orders exist for user $id"
+                    )
+                  )
+                case Right(value) ⇒ IO(println(value))
+              }
+        }
+      case AddItemToOrder(itemId, orderId, amount) ⇒
+        val maybeOldAmount = for {
+          _ ← EitherT(checkForOrder(orderId, xa))
+          _ ← EitherT(checkForItem(itemId, xa))
+          (_, _, oldAmt) ← EitherT(checkItemInOrder(orderId, itemId, xa))
+        } yield oldAmt
+        maybeOldAmount.value.flatMap {
+          case Left(err: OrderNotFound) ⇒ IO(println(err.toString))
+          case Left(_: ItemInBucketNotFound) ⇒
+            Order
+              .addItem(itemId, orderId, amount)
+              .withUniqueGeneratedKeys[Int]("id")
+              .transact(xa)
+              .flatMap(
+                id ⇒
+                  IO(println(s"Added item ${amount}xItem#$itemId to order $id"))
+              )
+          case Right(value) ⇒
+            Order
+              .changeAmount(orderId, itemId, value + amount)
+              .withUniqueGeneratedKeys[Int]("id")
+              .transact(xa)
+              .flatMap(
+                id ⇒
+                  IO(
+                    println(
+                      s"Amount of item $itemId in order $id has been changed from $value to ${value + amount}"
+                    )
+                )
+              )
+
+        }
+      case RemoveItemFromOrder(itemId, orderId) ⇒
+        val correct = for {
+          _ ← EitherT(checkForItem(itemId, xa))
+          _ ← EitherT(checkForOrder(orderId, xa))
+          (_, _, amt) ← EitherT(checkItemInOrder(orderId, itemId, xa))
+        } yield amt
+        correct.value.flatMap {
+          case Left(err) ⇒ IO(println(err.toString))
+          case Right(_) ⇒
+            Order
+              .removeItem(orderId, itemId)
+              .withUniqueGeneratedKeys[Int]("id")
+              .transact(xa)
+              .flatMap(
+                id ⇒ IO(println(s"Item $itemId was removed from order $id"))
+              )
+        }
+      case ChangeItemAmountInOrder(itemId, orderId, newAmount) ⇒
+        val oldAmount = for {
+          _ ← EitherT(checkForOrder(orderId, xa))
+          _ ← EitherT(checkForItem(itemId, xa))
+          (_, _, oldAmt) ← EitherT(checkItemInOrder(orderId, itemId, xa))
+        } yield oldAmt
+        oldAmount.value.flatMap {
+          case Left(err) ⇒ IO(println(err.toString))
+          case Right(value) ⇒
+            Order
+              .changeAmount(orderId, itemId, newAmount)
+              .withUniqueGeneratedKeys[Int]("id")
+              .transact(xa)
+              .flatMap(
+                id ⇒
+                  IO(
+                    println(
+                      s"For order $id amount of item $itemId has been changed from $value to $newAmount"
+                    )
+                )
+              )
+        }
       case _ ⇒ IO(println("Command unknown or not implemented yet"))
     }
   }

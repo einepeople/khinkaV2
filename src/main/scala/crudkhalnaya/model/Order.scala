@@ -23,7 +23,16 @@ case class OrderView(id: Int,
                      placed: LocalDateTime,
                      deliveryAddress: String,
                      content: List[(String, Int, Double)],
-                     total: Double)
+                     total: Double) {
+  override def toString: String =
+    s"Order #$id\nPlaced by $client at $placed\nDeliver to: $deliveryAddress\nOrder bucket:\n" +
+      content
+        .map {
+          case (str, i, d) ⇒ s"$str: ${i}x$d"
+        }
+        .mkString("\n") +
+      s"\nCheckout: $total"
+}
 
 object Order {
 
@@ -99,4 +108,8 @@ object Order {
     sql"""UPDATE KHINKA."Buckets" SET AMOUNT = $amount where (ID,ITEM)=($orderId,$itemId)  """.update
   def removeItem(orderId: Int, itemId: Int): Update0 =
     sql""" DELETE FROM KHINKA."Buckets" WHERE (ID,ITEM)=($orderId,$itemId) """.update
+
+  def fetchBucketEntry(ordId: Int, itemId: Int): Query0[(Int, Int, Int)] =
+    sql"""  SELECT * FROM KHINKA."Buckets" WHERE (ID,ITEM) = ($ordId, $itemId) """
+      .query[(Int, Int, Int)]
 }
