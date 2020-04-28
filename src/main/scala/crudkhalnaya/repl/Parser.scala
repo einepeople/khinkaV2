@@ -3,7 +3,7 @@ package crudkhalnaya.repl
 import java.time.LocalDate
 
 import crudkhalnaya.errors.{CommandNotFoundError, ParseError}
-import crudkhalnaya.model.{Client, Item}
+import crudkhalnaya.model.{Client, Item, Order}
 import crudkhalnaya.repl.Commands._
 import crudkhalnaya.utils.Utils.EitherErr
 
@@ -172,6 +172,67 @@ object Parser {
             ParseError("Amount cannot be negative")
           )
         } yield UpdateAmount(checkId, nnamt)
+
+      case s"Make new order by client $maybeId, deliver to $place" ⇒
+        for {
+          checkId ← parseInt(maybeId)
+          checkPlace ← Either.cond(
+            !place.isBlank,
+            place,
+            ParseError("Delivery destination cannot be blank")
+          )
+        } yield
+          AddOrder(
+            Order(-1, java.time.LocalDateTime.now(), checkId, checkPlace)
+          )
+      case s"show order $maybeId" ⇒
+        for {
+          checkId ← parseInt(maybeId)
+        } yield FetchOrder(checkId)
+      case s"delete order $maybeId" ⇒
+        for {
+          checkId ← parseInt(maybeId)
+        } yield DeleteOrder(checkId)
+      case s"show all orders" ⇒
+        Right(FetchAllOrders)
+      case s"show orders for client $maybeId" ⇒
+        for {
+          checkId ← parseInt(maybeId)
+        } yield FetchOrdersForClient(checkId)
+      case s"Add $mbAmt units of item $mbItem to order $ord" ⇒
+        for {
+          amt ← parseInt(mbAmt)
+          nnamt ← Either.cond(
+            amt >= 0,
+            amt,
+            ParseError("Amount cannot be negative")
+          )
+          itemId ← parseInt(mbItem)
+          ordId ← parseInt(ord)
+        } yield AddItemToOrder(itemId, ordId, nnamt)
+      case s"Add item $mbItem to order $maybeOrd" ⇒
+        for {
+          itemId ← parseInt(mbItem)
+          ordId ← parseInt(maybeOrd)
+        } yield AddItemToOrder(itemId, ordId, 1)
+      case s"Remove item $mbItem for order $maybeOrd" ⇒
+        for {
+          itemId ← parseInt(mbItem)
+          ordId ← parseInt(maybeOrd)
+        } yield RemoveItemFromOrder(itemId, ordId)
+      case s"Change number of items $mbItem in order $mbOrd to $mbAmt" ⇒
+        for {
+          itemId ← parseInt(mbItem)
+          ordId ← parseInt(mbOrd)
+          amt ← parseInt(mbAmt)
+          nnamt ← Either.cond(
+            amt >= 0,
+            amt,
+            ParseError("Amount cannot be negative")
+          )
+        } yield
+          if (nnamt > 0) ChangeItemAmountInOrder(itemId, ordId, nnamt)
+          else RemoveItemFromOrder(itemId, ordId)
       case x ⇒ Left(CommandNotFoundError(s"Unknown command $x"))
     }
   }

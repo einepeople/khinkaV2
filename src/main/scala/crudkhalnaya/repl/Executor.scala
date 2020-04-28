@@ -4,12 +4,13 @@ import cats.effect.IO
 import crudkhalnaya.repl.Commands._
 import doobie._
 import doobie.implicits._
-import cats._
 import cats.data._
 import cats.effect._
 import cats.implicits._
+import crudkhalnaya.errors.{CRUDError, OrderNotFound, UserNotFound}
 import fs2.Stream
-import crudkhalnaya.model.{Client, Item}
+import crudkhalnaya.model.{Client, Item, Order}
+import crudkhalnaya.utils.Utils.EitherErr
 import doobie.Transactor
 import doobie.util.compat.FactoryCompat
 
@@ -33,8 +34,41 @@ object Executor {
     "for item $maybeId set name to $newName",
     "for item $maybeId set description to $descr",
     "for item $maybeId set price to $maybePrice",
-    "for item $maybeId set amount to $maybeAmt"
+    "for item $maybeId set amount to $maybeAmt",
+    "Make new order by client $maybeId, deliver to $place",
+    "show order $maybeId",
+    "delete order $maybeId",
+    "show all orders",
+    "show orders for client $maybeId",
+    "Add item $mbItem to order $maybeOrd",
+    "Add $N units of item $mbItem to order $ord",
+    "Remove item $mbItem for order $maybeOrd",
+    "Change number of items $mbItem in order $mbOrd to $mbAmt"
   )
+
+  def checkForUser(id: Int, xa: Transactor[IO]): IO[EitherErr[Int]] = {
+    Client
+      .fetch(id)
+      .unique
+      .attempt
+      .transact(xa)
+      .flatMap {
+        case Left(_) ⇒ IO(Left(UserNotFound))
+        case Right(value) ⇒ IO(Right(value.id))
+      }
+  }
+
+  def checkForOrder(id: Int, xa: Transactor[IO]): IO[EitherErr[Int]] = {
+    Order
+      .fetch(id)
+      .unique
+      .attempt
+      .transact(xa)
+      .flatMap {
+        case Left(_) ⇒ IO(Left(OrderNotFound))
+        case Right(value) ⇒ IO(Right(value.id))
+      }
+  }
 
   def executeCommand(value: Command, xa: Transactor[IO]): IO[Unit] = {
 
@@ -217,6 +251,21 @@ object Executor {
             case Left(_) ⇒ IO(println(s"Item $id not found"))
             case Right(x) ⇒
               IO(println(s"We now have $newAmt of item $x"))
+          }
+      case AddOrder(order) ⇒
+        Client
+          .fetch(order.clientId)
+          .unique
+          .attempt
+          .transact(xa)
+          .flatMap {
+            case Left(_) ⇒ IO(println(s"User ${order.clientId} not found"))
+            case Right(_) ⇒
+              Order
+                .create(order)
+                .withUniqueGeneratedKeys[Int]("id")
+                .transact(xa)
+                .flatMap(id ⇒ IO(println(s"Order $id was created")))
           }
       case _ ⇒ IO(println("Command unknown or not implemented yet"))
     }

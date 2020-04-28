@@ -38,7 +38,7 @@ object Order {
 
   private def flatten[A, B, C](t: ((A, B), C)) = (t._1._1, t._1._2, t._2)
 
-  def dbOrderViewToOrderView(entry: dbOrderView): OrderView = {
+  private def dbOrderViewToOrderView(entry: dbOrderView): OrderView = {
     val dbOrderView(id, name, dt, delTo, nms, amts, prcs, total) = entry
     OrderView(
       id,
