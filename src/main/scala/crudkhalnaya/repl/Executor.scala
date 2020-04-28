@@ -253,20 +253,20 @@ object Executor {
               IO(println(s"We now have $newAmt of item $x"))
           }
       case AddOrder(order) ⇒
-        Client
-          .fetch(order.clientId)
-          .unique
-          .attempt
-          .transact(xa)
-          .flatMap {
-            case Left(_) ⇒ IO(println(s"User ${order.clientId} not found"))
-            case Right(_) ⇒
-              Order
-                .create(order)
-                .withUniqueGeneratedKeys[Int]("id")
-                .transact(xa)
-                .flatMap(id ⇒ IO(println(s"Order $id was created")))
-          }
+        val res = for {
+          _ ← EitherT(checkForUser(order.clientId, xa))
+          resId ← EitherT.right(
+            Order
+              .create(order)
+              .withUniqueGeneratedKeys[Int]("id")
+              .transact(xa)
+          )
+        } yield resId
+        res.value.flatMap {
+          case Left(err) ⇒ IO(println(err.toString))
+          case Right(value) ⇒ IO(println(s"Order $value has been created"))
+        }
+      //case FetchOrder
       case _ ⇒ IO(println("Command unknown or not implemented yet"))
     }
   }
