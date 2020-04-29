@@ -17,7 +17,7 @@ case class CommandNotFoundError(msg: String) extends CRUDError {
 case class ParseError(msg: String) extends CRUDError {
   override def toString: String = msg
 }
-case class UserNotFound(msg: String) extends CRUDError {
+case class ClientNotFound(msg: String) extends CRUDError {
   override def toString: String = msg
 }
 case class OrderNotFound(msg: String) extends CRUDError {

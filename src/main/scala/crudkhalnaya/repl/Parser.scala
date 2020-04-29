@@ -173,7 +173,7 @@ object Parser {
           )
         } yield UpdateAmount(checkId, nnamt)
 
-      case s"Make new order by client $maybeId, deliver to $place" ⇒
+      case s"make new order by client $maybeId, deliver to $place" ⇒
         for {
           checkId ← parseInt(maybeId)
           checkPlace ← Either.cond(
@@ -199,7 +199,7 @@ object Parser {
         for {
           checkId ← parseInt(maybeId)
         } yield FetchOrdersForClient(checkId)
-      case s"Add $mbAmt units of item $mbItem to order $ord" ⇒
+      case s"add $mbAmt items $mbItem to order $ord" ⇒
         for {
           amt ← parseInt(mbAmt)
           nnamt ← Either.cond(
@@ -210,17 +210,17 @@ object Parser {
           itemId ← parseInt(mbItem)
           ordId ← parseInt(ord)
         } yield AddItemToOrder(itemId, ordId, nnamt)
-      case s"Add item $mbItem to order $maybeOrd" ⇒
+      case s"add item $mbItem to order $maybeOrd" ⇒
         for {
           itemId ← parseInt(mbItem)
           ordId ← parseInt(maybeOrd)
         } yield AddItemToOrder(itemId, ordId, 1)
-      case s"Remove item $mbItem for order $maybeOrd" ⇒
+      case s"remove item $mbItem from order $maybeOrd" ⇒
         for {
           itemId ← parseInt(mbItem)
           ordId ← parseInt(maybeOrd)
         } yield RemoveItemFromOrder(itemId, ordId)
-      case s"Change number of items $mbItem in order $mbOrd to $mbAmt" ⇒
+      case s"change number of items $mbItem in order $mbOrd to $mbAmt" ⇒
         for {
           itemId ← parseInt(mbItem)
           ordId ← parseInt(mbOrd)

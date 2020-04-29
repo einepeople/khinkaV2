@@ -12,7 +12,7 @@ import crudkhalnaya.errors.{
   CRUDError,
   ItemInBucketNotFound,
   OrderNotFound,
-  UserNotFound
+  ClientNotFound
 }
 import fs2.Stream
 import crudkhalnaya.model.{Client, Item, Order}
@@ -41,15 +41,15 @@ object Executor {
     "for item $maybeId set description to $descr",
     "for item $maybeId set price to $maybePrice",
     "for item $maybeId set amount to $maybeAmt",
-    "Make new order by client $maybeId, deliver to $place",
+    "make new order by client $maybeId, deliver to $place",
     "show order $maybeId",
     "delete order $maybeId",
     "show all orders",
     "show orders for client $maybeId",
-    "Add item $mbItem to order $maybeOrd",
-    "Add $N units of item $mbItem to order $ord",
-    "Remove item $mbItem for order $maybeOrd",
-    "Change number of items $mbItem in order $mbOrd to $mbAmt"
+    "add item $mbItem to order $maybeOrd",
+    "add $N items $mbItem to order $ord",
+    "remove item $mbItem from order $maybeOrd",
+    "change number of items $mbItem in order $mbOrd to $mbAmt"
   )
 
   def checkForUser(id: Int, xa: Transactor[IO]): IO[EitherErr[Int]] = {
@@ -59,7 +59,7 @@ object Executor {
       .attempt
       .transact(xa)
       .flatMap {
-        case Left(_) ⇒ IO(Left(UserNotFound(s"User $id not found")))
+        case Left(_) ⇒ IO(Left(ClientNotFound(s"User $id not found")))
         case Right(value) ⇒ IO(Right(value.id))
       }
   }
@@ -70,7 +70,7 @@ object Executor {
       .attempt
       .transact(xa)
       .flatMap {
-        case Left(_) ⇒ IO(Left(UserNotFound(s"Item $id not found")))
+        case Left(_) ⇒ IO(Left(ClientNotFound(s"Item $id not found")))
         case Right(value) ⇒ IO(Right(value.id))
       }
   }
@@ -177,13 +177,13 @@ object Executor {
       case DeleteClient(id) ⇒
         Client
           .delete(id)
-          .withUniqueGeneratedKeys[Int]("id")
+          .run
           .attempt
           .transact(xa)
           .flatMap {
             case Left(_) ⇒ IO(println(s"No such client"))
             case Right(x) ⇒
-              IO(println(s"Client $x deleted"))
+              IO(println(s"$x client deleted"))
           }
       case FetchAllClients ⇒
         Client.fetchAll
@@ -207,13 +207,13 @@ object Executor {
       case DeleteItem(id) ⇒
         Item
           .delete(id)
-          .withUniqueGeneratedKeys[Int]("id")
+          .run
           .attempt
           .transact(xa)
           .flatMap {
             case Left(_) ⇒ IO(println(s"No such item"))
             case Right(x) ⇒
-              IO(println(s"Item $x deleted"))
+              IO(println(s"$x item  deleted"))
           }
       case FetchItem(id) ⇒
         Item
@@ -310,13 +310,14 @@ object Executor {
       case DeleteOrder(id) ⇒
         Order
           .delete(id)
-          .withUniqueGeneratedKeys[Int]("id")
+          .run
           .attempt
           .transact(xa)
           .flatMap {
-            case Left(_) ⇒ IO(println(OrderNotFound(s"Order $id not found")))
-            case Right(deletedId) ⇒
-              IO(println(s"Order $deletedId has been deleted"))
+            case Left(err) ⇒
+              IO(println(OrderNotFound(s"Order $id not found. Or $err")))
+            case Right(_) ⇒
+              IO(println(s"Order $id has been deleted"))
           }
       case FetchAllOrders ⇒
         Order.fetchAll
@@ -338,7 +339,6 @@ object Executor {
             Order
               .fetchForUser(id)
               .to[List]
-              .map(_.toString)
               .attempt
               .transact(xa)
               .flatMap {
@@ -348,7 +348,15 @@ object Executor {
                       s"Error during fetching. Probably no orders exist for user $id"
                     )
                   )
-                case Right(value) ⇒ IO(println(value))
+                case Right(value) ⇒
+                  //TODO: add an explicit handler for empty order list, now it just gives empty string at value.map(...)
+                  // it is ok, but one can just make it a bit fancier
+                  IO(
+                    println(
+                      ("List of orders for client $id:" ::
+                        value.map(_.toString)).mkString("\n\n")
+                    )
+                  )
               }
         }
       case AddItemToOrder(itemId, orderId, amount) ⇒
@@ -361,12 +369,12 @@ object Executor {
           case Left(err: OrderNotFound) ⇒ IO(println(err.toString))
           case Left(_: ItemInBucketNotFound) ⇒
             Order
-              .addItem(itemId, orderId, amount)
+              .addItem(orderId, itemId, amount)
               .withUniqueGeneratedKeys[Int]("id")
               .transact(xa)
               .flatMap(
                 id ⇒
-                  IO(println(s"Added item ${amount}xItem#$itemId to order $id"))
+                  IO(println(s"Added item $amount x Item#$itemId to order $id"))
               )
           case Right(value) ⇒
             Order
@@ -394,10 +402,11 @@ object Executor {
           case Right(_) ⇒
             Order
               .removeItem(orderId, itemId)
-              .withUniqueGeneratedKeys[Int]("id")
+              .run
               .transact(xa)
               .flatMap(
-                id ⇒ IO(println(s"Item $itemId was removed from order $id"))
+                id ⇒
+                  IO(println(s"Item $itemId was removed from order $orderId"))
               )
         }
       case ChangeItemAmountInOrder(itemId, orderId, newAmount) ⇒

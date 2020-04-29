@@ -82,7 +82,7 @@ object Main extends IOApp {
     runFallible(args).value.flatMap {
       case Left(err) =>
         IO(println(s"Error during initialization: $err")).as(ExitCode.Error)
-      case Right(value) =>
+      case Right(_) =>
         IO(ftpool.shutdown()).as(ExitCode.Success)
     }
   }
