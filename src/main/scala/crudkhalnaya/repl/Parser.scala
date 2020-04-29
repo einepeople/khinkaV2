@@ -10,7 +10,7 @@ import crudkhalnaya.utils.Utils.EitherErr
 import scala.util.{Failure, Success, Try}
 
 object Parser {
-  private def parseSex(input: String): EitherErr[Boolean] = {
+  def parseSex(input: String): EitherErr[Boolean] = {
     input.toLowerCase match {
       case "male" ⇒ Right(true)
       case "female" ⇒ Right(false)
@@ -18,7 +18,7 @@ object Parser {
     }
   }
 
-  private def parseBirthdate(input: String): EitherErr[LocalDate] = {
+  def parseBirthdate(input: String): EitherErr[LocalDate] = {
     val t = Try[LocalDate](LocalDate.parse(input))
     t match {
       case Success(value) ⇒ Right(value)
@@ -26,13 +26,13 @@ object Parser {
     }
   }
 
-  private def parseInt(input: String): EitherErr[Int] =
+  def parseInt(input: String): EitherErr[Int] =
     Try[Int](input.toInt) match {
       case Failure(_) ⇒ Left(ParseError(s"Cannot parse int from $input"))
       case Success(value) ⇒ Right(value)
     }
 
-  private def parseDouble(input: String): EitherErr[Double] =
+  def parseDouble(input: String): EitherErr[Double] =
     Try[Double](input.toDouble) match {
       case Failure(_) ⇒ Left(ParseError(s"Cannot parse double from $input"))
       case Success(value) ⇒ Right(value)

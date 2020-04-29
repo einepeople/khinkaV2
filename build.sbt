@@ -14,5 +14,6 @@ libraryDependencies ++= Seq(
   "org.tpolecat" %% "doobie-core" % "0.8.8",
   "org.tpolecat" %% "doobie-h2" % "0.8.8",
   "org.tpolecat" %% "doobie-scalatest" % "0.8.8" % "test",
-  "com.github.pureconfig" %% "pureconfig" % "0.12.3"
+  "com.github.pureconfig" %% "pureconfig" % "0.12.3",
+  "org.scalatest" %% "scalatest" % "3.0.8" % Test
 )

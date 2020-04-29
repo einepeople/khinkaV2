@@ -4,6 +4,7 @@ sealed trait CRUDError {
   def toString: String
 }
 
+case object GenericCRUDError extends CRUDError
 case class ConfigError(msg: String) extends CRUDError {
   override def toString: String = msg
 }
