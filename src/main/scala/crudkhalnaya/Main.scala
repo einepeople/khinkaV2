@@ -12,7 +12,6 @@ import crudkhalnaya.utils.Config
 import crudkhalnaya.utils.Utils.EitherErr
 import doobie.implicits._
 import doobie.util.transactor.Transactor
-import doobie.util.ExecutionContexts
 import pureconfig._
 import pureconfig.generic.auto._
 
@@ -59,7 +58,9 @@ object Main extends IOApp {
       }
   }
 
-  def runFallible(args: List[String]): EitherT[IO, CRUDError, ExitCode] =
+  def runFallible(
+    args: List[String]
+  )(implicit clock: Clock[IO]): EitherT[IO, CRUDError, ExitCode] =
     for {
       cfg ← EitherT(loadConfig)
       trs ← EitherT(

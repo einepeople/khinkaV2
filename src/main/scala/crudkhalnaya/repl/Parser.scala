@@ -1,6 +1,7 @@
 package crudkhalnaya.repl
 
-import java.time.LocalDate
+import java.time.{LocalDate, LocalDateTime}
+import java.time.ZoneOffset
 
 import crudkhalnaya.errors.{CommandNotFoundError, ParseError}
 import crudkhalnaya.model.{Client, Item, Order}
@@ -10,7 +11,7 @@ import crudkhalnaya.utils.Utils.EitherErr
 import scala.util.{Failure, Success, Try}
 
 object Parser {
-  def parseSex(input: String): EitherErr[Boolean] = {
+  private def parseSex(input: String): EitherErr[Boolean] = {
     input.toLowerCase match {
       case "male" ⇒ Right(true)
       case "female" ⇒ Right(false)
@@ -18,7 +19,7 @@ object Parser {
     }
   }
 
-  def parseBirthdate(input: String): EitherErr[LocalDate] = {
+  private def parseBirthdate(input: String): EitherErr[LocalDate] = {
     val t = Try[LocalDate](LocalDate.parse(input))
     t match {
       case Success(value) ⇒ Right(value)
@@ -26,19 +27,19 @@ object Parser {
     }
   }
 
-  def parseInt(input: String): EitherErr[Int] =
+  private def parseInt(input: String): EitherErr[Int] =
     Try[Int](input.toInt) match {
       case Failure(_) ⇒ Left(ParseError(s"Cannot parse int from $input"))
       case Success(value) ⇒ Right(value)
     }
 
-  def parseDouble(input: String): EitherErr[Double] =
+  private def parseDouble(input: String): EitherErr[Double] =
     Try[Double](input.toDouble) match {
       case Failure(_) ⇒ Left(ParseError(s"Cannot parse double from $input"))
       case Success(value) ⇒ Right(value)
     }
 
-  def parseCommand(input: String): EitherErr[Command] = {
+  def parseCommand(input: String, currentTime: Long): EitherErr[Command] = {
     input match {
       case "exit" ⇒
         Right(Exit)
@@ -183,7 +184,13 @@ object Parser {
           )
         } yield
           AddOrder(
-            Order(-1, java.time.LocalDateTime.now(), checkId, checkPlace)
+            Order(
+              -1,
+              LocalDateTime
+                .ofEpochSecond(currentTime, 0, ZoneOffset.UTC),
+              checkId,
+              checkPlace
+            )
           )
       case s"show order $maybeId" ⇒
         for {

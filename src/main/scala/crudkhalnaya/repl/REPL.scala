@@ -8,6 +8,7 @@ import crudkhalnaya.repl.Commands._
 import scala.io.StdIn
 import Parser.parseCommand
 import Executor.executeCommand
+import scala.concurrent.duration.SECONDS
 
 object REPL {
   def execute(value: EitherErr[Command], xa: Transactor[IO]): IO[Unit] = {
@@ -25,10 +26,11 @@ object REPL {
     }
   }
 
-  def runREPL(trs: Transactor[IO]): IO[ExitCode] = {
+  def runREPL(trs: Transactor[IO])(implicit clock: Clock[IO]): IO[ExitCode] = {
     for {
       input ← IO(StdIn.readLine("\n> "))
-      cmd ← IO(parseCommand(input.strip()))
+      curTime ← clock.realTime(SECONDS)
+      cmd ← IO(parseCommand(input.strip(), curTime))
       _ ← execute(cmd, trs)
       res ← if (checkForExit(cmd)) IO.pure(ExitCode.Success) else runREPL(trs)
     } yield res
