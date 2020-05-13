@@ -28,3 +28,5 @@ After that change `src/main/resources/application.conf` to correspond to your DB
 * password
 
 Run the application using `src/main/scala/crukhalnaya/Main`
+
+When prompt shows up, type `help` to get a list of available commands
