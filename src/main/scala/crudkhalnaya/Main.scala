@@ -27,9 +27,9 @@ object Main extends IOApp {
     IO.contextShift(ec)
 
   def loadConfig: IO[EitherErr[Config]] = {
-    ConfigSource.default.load[Config] match {
-      case Left(_)       => IO(Left(ConfigError("Failed to load config")))
-      case Right(config) => IO(Right(config))
+    IO(ConfigSource.default.load[Config]).map {
+      case Left(_)       => Left(ConfigError("Failed to load config"))
+      case Right(config) => Right(config)
     }
   }
 
