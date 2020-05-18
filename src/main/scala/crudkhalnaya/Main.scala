@@ -63,17 +63,11 @@ object Main extends IOApp {
   )(implicit clock: Clock[IO]): EitherT[IO, CRUDError, ExitCode] =
     for {
       cfg ← EitherT(loadConfig)
-      trs ← EitherT(
-        IO(
-          Either.right[CRUDError, Transactor[IO]](
-            loadTransactor(
-              cfg.db.driver,
-              cfg.db.hostname,
-              cfg.db.user,
-              cfg.db.password
-            )
-          )
-        )
+      trs = loadTransactor(
+        cfg.db.driver,
+        cfg.db.hostname,
+        cfg.db.user,
+        cfg.db.password
       )
       tested ← EitherT(testTransactor(trs))
       exitCode ← EitherT.liftF(REPL.runREPL(tested))
