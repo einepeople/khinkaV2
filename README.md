@@ -1,12 +1,8 @@
 # khinkaV2
 
-Simple CRUD project: H2 + doobie + filthy attempts to make it pure'n'functional
+Simple CRUD project: H2 + doobie + IO
 
-Made for me to graduate from the Uni
-
-UPD: [mood](https://coub.com/view/29jdfr)
-
-UPD2: [mood](https://www.youtube.com/watch?v=ZHrLNqDVewM)
+Represents a Restaurant, with *Clients* taking *Orders* consisting of *Items*:)
 
 # How to Яun
 
@@ -29,4 +25,4 @@ After that change `src/main/resources/application.conf` to correspond to your DB
 
 Run the application using `src/main/scala/crukhalnaya/Main`
 
-When prompt shows up, type `help` to get a list of available commands
+When the prompt shows up, type `help` to get a list of available commands
